@@ -10,6 +10,7 @@ import * as admin from 'firebase-admin';
 const RUN_STALE_TIMEOUT_MS = 15 * 60 * 1000;
 
 interface StoredRunData extends Record<string, any> {
+    organizationId?: string;
     type?: 'suite' | 'test-case';
     testCaseId?: string;
     testCaseIds?: string[];
@@ -114,7 +115,7 @@ export async function executeTestRun(runId: string, lease: RunLease) {
             if (!runData.testCaseId) {
                 throw new Error('Run is missing testCaseId');
             }
-            const result = await executeSingleTestCase(runId, runData.testCaseId, runRef, lease, false, 0, runData.projectId, runData);
+            const result = await executeSingleTestCase(runId, runData.testCaseId, runRef, lease, false, 0, runData.projectId, runData.organizationId, runData);
             if (result.cancelled) {
                 return;
             }
@@ -186,7 +187,7 @@ async function processSuite(runId: string, runData: any, lease: RunLease) {
         await updateRunWithLease(runRef, lease, { results }, ['running']);
 
         try {
-            const result = await executeSingleTestCase(runId, tcId, runRef, lease, true, i, runData.projectId, runData);
+            const result = await executeSingleTestCase(runId, tcId, runRef, lease, true, i, runData.projectId, runData.organizationId, runData);
             if (result.cancelled) {
                 results[i] = {
                     ...results[i],
@@ -262,6 +263,7 @@ async function executeSingleTestCase(
     isSuite: boolean = false,
     suiteIndex: number = 0,
     projectId?: string,
+    organizationId?: string,
     runData?: any
 ) {
     if (!testCaseId) {
@@ -368,7 +370,7 @@ async function executeSingleTestCase(
                 try {
                     const screenshotBuffer = await page.screenshot({ type: 'png' });
                     if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
-                        const screenshotPath = `screenshots/${projectId || 'unknown'}/${runId}/${testCaseId}_${step.id}.png`;
+                        const screenshotPath = `screenshots/${organizationId || 'unknown-org'}/${projectId || 'unknown'}/${runId}/${testCaseId}_${step.id}.png`;
                         const file = adminStorage.bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET)
                            .file(screenshotPath);
                         
@@ -405,7 +407,7 @@ async function executeSingleTestCase(
             // Upload Trace
             if (process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET && fs.existsSync(localTracePath)) {
                 const traceBuffer = fs.readFileSync(localTracePath);
-                const storageTracePath = `traces/${projectId || 'unknown'}/${runId}/${testCaseId}.zip`;
+                const storageTracePath = `traces/${organizationId || 'unknown-org'}/${projectId || 'unknown'}/${runId}/${testCaseId}.zip`;
                 const traceFile = adminStorage.bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET)
                     .file(storageTracePath);
                 
@@ -425,12 +427,12 @@ async function executeSingleTestCase(
                     if (webmFile) {
                         const videoBuffer = fs.readFileSync(`${videoDir}/${webmFile}`);
                         const videoFile = adminStorage.bucket(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET)
-                            .file(`videos/${projectId || 'unknown'}/${runId}/${testCaseId}.webm`);
+                            .file(`videos/${organizationId || 'unknown-org'}/${projectId || 'unknown'}/${runId}/${testCaseId}.webm`);
                         
                         await videoFile.save(videoBuffer, {
                             contentType: 'video/webm',
                         });
-                        videoPath = `videos/${projectId || 'unknown'}/${runId}/${testCaseId}.webm`;
+                        videoPath = `videos/${organizationId || 'unknown-org'}/${projectId || 'unknown'}/${runId}/${testCaseId}.webm`;
                     }
                 }
             }

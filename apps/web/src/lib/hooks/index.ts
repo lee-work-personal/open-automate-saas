@@ -4,6 +4,7 @@ export { useTestCases, useTestCase, useTestCaseMutations } from './useTestCases'
 export { useTestRun, useTestRunDetails } from './useTestRun';
 export { useTestRuns, type TestRun, type LogEntry } from './useTestRuns';
 export { useProjectVariables, useProjectVariableMutations, type ProjectVariable } from './useVariables';
+export { useOrganizations, type OrganizationRecord } from './useOrganizations';
 
 // Re-export types
 export type { Project, CreateProjectInput, UpdateProjectInput } from './useProjects';

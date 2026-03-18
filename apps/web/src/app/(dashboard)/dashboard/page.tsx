@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useProjects } from '@/lib/hooks';
 import { useHealthStatus } from '@/lib/hooks/useHealthStatus';
 import { useProjectContext } from '@/components/layout/ProjectProvider';
+import { useOrganizationContext } from '@/components/layout/OrganizationProvider';
 import { Card, CardHeader, Button, Badge } from '@/components/ui';
 import {
     FolderKanban,
@@ -23,7 +24,8 @@ import {
 } from 'lucide-react';
 
 export default function DashboardPage() {
-    const { projects, loading: projectsLoading } = useProjects();
+    const { activeOrganization } = useOrganizationContext();
+    const { projects, loading: projectsLoading } = useProjects(activeOrganization?.id);
     const { health, loading: healthLoading } = useHealthStatus();
     const { suites, testCases } = useProjectContext();
 
@@ -103,7 +105,9 @@ export default function DashboardPage() {
                 <div>
                     <h1 className="text-3xl font-bold text-white">Dashboard</h1>
                     <p className="text-gray-400 mt-1">
-                        Welcome back! Here&apos;s your testing overview.
+                        {activeOrganization
+                            ? `Workspace: ${activeOrganization.name}`
+                            : 'Select a workspace to see your testing overview.'}
                     </p>
                 </div>
                 <Link href="/projects/new">

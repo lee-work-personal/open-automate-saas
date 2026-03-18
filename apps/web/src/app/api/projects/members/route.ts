@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         const memberUser = userQuery.docs[0];
         const projectRef = adminDb.collection('projects').doc(projectId);
         const projectSnap = await projectRef.get();
-        const project = projectSnap.data() as { ownerId: string; members?: string[] };
+        const project = projectSnap.data() as { ownerId: string; members?: string[]; organizationId?: string };
 
         if (memberUser.id === project.ownerId) {
             return NextResponse.json({ error: 'Owner is already part of the project' }, { status: 400 });
@@ -75,6 +75,21 @@ export async function POST(req: NextRequest) {
 
         if ((project.members || []).includes(memberUser.id)) {
             return NextResponse.json({ error: 'User is already a member of this project' }, { status: 409 });
+        }
+
+        if (project.organizationId) {
+            const organizationSnap = await adminDb.collection('organizations').doc(project.organizationId).get();
+            const organization = organizationSnap.data() as { ownerId: string; members?: string[] } | undefined;
+            const isOrganizationMember =
+                !!organization &&
+                (organization.ownerId === memberUser.id || (organization.members || []).includes(memberUser.id));
+
+            if (!isOrganizationMember) {
+                return NextResponse.json(
+                    { error: 'User must be added to the workspace before they can access this project' },
+                    { status: 400 }
+                );
+            }
         }
 
         await projectRef.update({

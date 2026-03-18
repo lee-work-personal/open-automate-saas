@@ -20,6 +20,7 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './config';
 import { COLLECTIONS } from '@/lib/constants';
+import { ensurePersonalOrganization } from '@/lib/tenancy';
 
 // Auth Context Types
 interface AuthContextType {
@@ -53,15 +54,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const createUserDocument = async (user: User) => {
         const userRef = doc(db, COLLECTIONS.USERS, user.uid);
         const userSnap = await getDoc(userRef);
+        const defaultOrganizationId = await ensurePersonalOrganization(db, user);
 
         if (!userSnap.exists()) {
             await setDoc(userRef, {
                 email: user.email,
                 displayName: user.displayName || user.email?.split('@')[0],
                 photoURL: user.photoURL || null,
+                defaultOrganizationId,
+                organizationIds: [defaultOrganizationId],
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
             });
+        } else {
+            await setDoc(userRef, {
+                email: user.email,
+                displayName: user.displayName || user.email?.split('@')[0],
+                photoURL: user.photoURL || null,
+                defaultOrganizationId,
+                updatedAt: serverTimestamp(),
+            }, { merge: true });
         }
     };
 

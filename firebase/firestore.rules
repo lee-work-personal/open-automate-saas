@@ -7,21 +7,45 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    // Helper function to check if user owns the document
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
-    
-    // Helper function to check if user is a member of a project
+
+    function getProject(projectId) {
+      return get(/databases/$(database)/documents/projects/$(projectId));
+    }
+
+    function getOrganization(organizationId) {
+      return get(/databases/$(database)/documents/organizations/$(organizationId));
+    }
+
+    function isOrganizationMember(organizationId) {
+      let organization = getOrganization(organizationId);
+      return organization.data.ownerId == request.auth.uid ||
+             request.auth.uid in organization.data.members;
+    }
+
+    function isOrganizationOwner(organizationId) {
+      let organization = getOrganization(organizationId);
+      return organization.data.ownerId == request.auth.uid;
+    }
+
     function isProjectMember(projectId) {
-      let project = get(/databases/$(database)/documents/projects/$(projectId));
-      return project.data.ownerId == request.auth.uid || 
-             request.auth.uid in project.data.members;
+      let project = getProject(projectId);
+      return isOrganizationMember(project.data.organizationId) &&
+             (project.data.ownerId == request.auth.uid ||
+              request.auth.uid in project.data.members);
     }
 
     function isProjectOwner(projectId) {
-      let project = get(/databases/$(database)/documents/projects/$(projectId));
-      return project.data.ownerId == request.auth.uid;
+      let project = getProject(projectId);
+      return isOrganizationMember(project.data.organizationId) &&
+             project.data.ownerId == request.auth.uid;
+    }
+
+    function projectMatchesOrganization(projectId, organizationId) {
+      let project = getProject(projectId);
+      return project.data.organizationId == organizationId;
     }
     
     // Users collection
@@ -35,22 +59,37 @@ service cloud.firestore {
       // Users cannot delete their document (soft delete only)
       allow delete: if false;
     }
+
+    match /organizations/{organizationId} {
+      allow read: if isAuthenticated() && isOrganizationMember(organizationId);
+      allow create: if isAuthenticated() &&
+                       request.resource.data.ownerId == request.auth.uid &&
+                       request.auth.uid in request.resource.data.members;
+      allow update: if isAuthenticated() &&
+                       resource.data.ownerId == request.auth.uid;
+      allow delete: if false;
+    }
     
     // Projects collection
     match /projects/{projectId} {
       // Owner or members can read - check directly from resource data
       allow read: if isAuthenticated() && 
+                     isOrganizationMember(resource.data.organizationId) &&
                      (resource.data.ownerId == request.auth.uid || 
                       request.auth.uid in resource.data.members);
       // Any authenticated user can create a project
       allow create: if isAuthenticated() && 
-                       request.resource.data.ownerId == request.auth.uid;
+                       request.resource.data.ownerId == request.auth.uid &&
+                       isOrganizationMember(request.resource.data.organizationId);
       // Only owner can update
       allow update: if isAuthenticated() && 
-                       resource.data.ownerId == request.auth.uid;
+                       resource.data.ownerId == request.auth.uid &&
+                       isOrganizationMember(resource.data.organizationId) &&
+                       request.resource.data.organizationId == resource.data.organizationId;
       // Only owner can delete
       allow delete: if isAuthenticated() && 
-                       resource.data.ownerId == request.auth.uid;
+                       resource.data.ownerId == request.auth.uid &&
+                       isOrganizationMember(resource.data.organizationId);
     }
     
     // Test Suites collection
@@ -60,10 +99,12 @@ service cloud.firestore {
                      isProjectMember(resource.data.projectId);
       // Only owners can create
       allow create: if isAuthenticated() && 
-                       isProjectOwner(request.resource.data.projectId);
+                       isProjectOwner(request.resource.data.projectId) &&
+                       projectMatchesOrganization(request.resource.data.projectId, request.resource.data.organizationId);
       // Only owners can update
       allow update: if isAuthenticated() && 
-                       isProjectOwner(resource.data.projectId);
+                       isProjectOwner(resource.data.projectId) &&
+                       resource.data.organizationId == request.resource.data.organizationId;
       // Only owners can delete
       allow delete: if isAuthenticated() && 
                        isProjectOwner(resource.data.projectId);
@@ -76,10 +117,12 @@ service cloud.firestore {
                      isProjectMember(resource.data.projectId);
       // Only owners can create
       allow create: if isAuthenticated() && 
-                       isProjectOwner(request.resource.data.projectId);
+                       isProjectOwner(request.resource.data.projectId) &&
+                       projectMatchesOrganization(request.resource.data.projectId, request.resource.data.organizationId);
       // Only owners can update
       allow update: if isAuthenticated() && 
-                       isProjectOwner(resource.data.projectId);
+                       isProjectOwner(resource.data.projectId) &&
+                       resource.data.organizationId == request.resource.data.organizationId;
       // Only owners can delete
       allow delete: if isAuthenticated() && 
                        isProjectOwner(resource.data.projectId);
@@ -92,7 +135,8 @@ service cloud.firestore {
                      (isProjectMember(resource.data.projectId) || resource.data.triggeredBy == request.auth.uid);
       // Only owners can queue runs
       allow create: if isAuthenticated() && 
-                       isProjectOwner(request.resource.data.projectId);
+                       isProjectOwner(request.resource.data.projectId) &&
+                       projectMatchesOrganization(request.resource.data.projectId, request.resource.data.organizationId);
       // Run updates are server-managed
       allow update: if false;
       // No one can delete runs (keep for audit)
@@ -119,10 +163,12 @@ service cloud.firestore {
                      isProjectMember(resource.data.projectId);
       // Only owners can create
       allow create: if isAuthenticated() && 
-                       isProjectOwner(request.resource.data.projectId);
+                       isProjectOwner(request.resource.data.projectId) &&
+                       projectMatchesOrganization(request.resource.data.projectId, request.resource.data.organizationId);
       // Only owners can update
       allow update: if isAuthenticated() && 
-                       isProjectOwner(resource.data.projectId);
+                       isProjectOwner(resource.data.projectId) &&
+                       resource.data.organizationId == request.resource.data.organizationId;
       // Only owners can delete
       allow delete: if isAuthenticated() && 
                        isProjectOwner(resource.data.projectId);
@@ -130,8 +176,12 @@ service cloud.firestore {
     // Variables collection
     match /variables/{variableId} {
       allow read: if isAuthenticated() && isProjectMember(resource.data.projectId);
-      allow create: if isAuthenticated() && isProjectOwner(request.resource.data.projectId);
-      allow update: if isAuthenticated() && isProjectOwner(resource.data.projectId);
+      allow create: if isAuthenticated() &&
+                       isProjectOwner(request.resource.data.projectId) &&
+                       projectMatchesOrganization(request.resource.data.projectId, request.resource.data.organizationId);
+      allow update: if isAuthenticated() &&
+                       isProjectOwner(resource.data.projectId) &&
+                       resource.data.organizationId == request.resource.data.organizationId;
       allow delete: if isAuthenticated() && isProjectOwner(resource.data.projectId);
     }
   }

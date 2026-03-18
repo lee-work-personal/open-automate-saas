@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/firebase';
 import { Sidebar } from './Sidebar';
 import { ProjectProvider } from './ProjectProvider';
+import { OrganizationProvider } from './OrganizationProvider';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -39,16 +40,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
     return (
         <div className="min-h-screen bg-gray-950">
-            <Sidebar />
+            <OrganizationProvider>
+                <Sidebar />
 
-            {/* Main content */}
-            <main className="lg:pl-64 pt-16 lg:pt-0">
-                <div className="px-4 sm:px-6 lg:px-8 py-8">
-                    <ProjectProvider>
-                        {children}
-                    </ProjectProvider>
-                </div>
-            </main>
+                {/* Main content */}
+                <main className="lg:pl-64 pt-16 lg:pt-0">
+                    <div className="px-4 sm:px-6 lg:px-8 py-8">
+                        <ProjectProvider>
+                            {children}
+                        </ProjectProvider>
+                    </div>
+                </main>
+            </OrganizationProvider>
         </div>
     );
 }

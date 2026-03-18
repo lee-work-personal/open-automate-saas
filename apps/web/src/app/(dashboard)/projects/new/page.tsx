@@ -7,10 +7,12 @@ import { useProjectMutations } from '@/lib/hooks';
 import { Card, Button, Input } from '@/components/ui';
 import { ArrowLeft, FolderKanban } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useOrganizationContext } from '@/components/layout/OrganizationProvider';
 
 export default function NewProjectPage() {
     const router = useRouter();
     const { createProject, loading } = useProjectMutations();
+    const { activeOrganization } = useOrganizationContext();
 
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -76,7 +78,10 @@ export default function NewProjectPage() {
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-white">Create New Project</h1>
-                        <p className="text-gray-400">Set up a new test automation project</p>
+                        <p className="text-gray-400">
+                            Set up a new test automation project
+                            {activeOrganization ? ` in ${activeOrganization.name}` : ''}
+                        </p>
                     </div>
                 </div>
 

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { db, auth } from '@/lib/firebase';
-import { collection, addDoc, Timestamp, doc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, doc, onSnapshot, getDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { TestRun } from './useTestRuns';
+import { COLLECTIONS } from '@/lib/constants';
 
 export function useTestRun() {
     const [loading, setLoading] = useState(false);
@@ -13,9 +14,16 @@ export function useTestRun() {
 
         setLoading(true);
         try {
+            const projectSnap = await getDoc(doc(db, COLLECTIONS.PROJECTS, projectId));
+            const organizationId = projectSnap.data()?.organizationId;
+            if (!organizationId) {
+                throw new Error('Project organization could not be resolved');
+            }
+
             const defaultName = `Run - ${format(new Date(), 'yyyy-MM-dd HH:mm')}`;
 
-            const docRef = await addDoc(collection(db, 'testRuns'), {
+            const docRef = await addDoc(collection(db, COLLECTIONS.TEST_RUNS), {
+                organizationId,
                 projectId,
                 testCaseId,
                 name: customName || defaultName,
@@ -45,9 +53,16 @@ export function useTestRun() {
 
         setLoading(true);
         try {
+            const projectSnap = await getDoc(doc(db, COLLECTIONS.PROJECTS, projectId));
+            const organizationId = projectSnap.data()?.organizationId;
+            if (!organizationId) {
+                throw new Error('Project organization could not be resolved');
+            }
+
             const runName = `${suiteName} - ${format(new Date(), 'yyyy-MM-dd HH:mm')}`;
 
-            const docRef = await addDoc(collection(db, 'testRuns'), {
+            const docRef = await addDoc(collection(db, COLLECTIONS.TEST_RUNS), {
+                organizationId,
                 projectId,
                 suiteId,
                 name: runName,

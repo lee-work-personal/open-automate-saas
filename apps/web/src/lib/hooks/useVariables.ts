@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, Timestamp, getDoc } from 'firebase/firestore';
+import { COLLECTIONS } from '@/lib/constants';
 
 export interface ProjectVariable {
     id: string;
+    organizationId: string;
     projectId: string;
     key: string;
     value: string;
@@ -23,7 +25,7 @@ export function useProjectVariables(projectId: string) {
         if (!projectId) return;
 
         const q = query(
-            collection(db, 'variables'),
+            collection(db, COLLECTIONS.VARIABLES),
             where('projectId', '==', projectId)
         );
 
@@ -48,11 +50,18 @@ export function useProjectVariables(projectId: string) {
 export function useProjectVariableMutations() {
     const [loading, setLoading] = useState(false);
 
-    const createVariable = async (data: Omit<ProjectVariable, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const createVariable = async (data: Omit<ProjectVariable, 'id' | 'organizationId' | 'createdAt' | 'updatedAt'>) => {
         setLoading(true);
         try {
-            await addDoc(collection(db, 'variables'), {
+            const projectSnap = await getDoc(doc(db, COLLECTIONS.PROJECTS, data.projectId));
+            const organizationId = projectSnap.data()?.organizationId;
+            if (!organizationId) {
+                throw new Error('Project organization could not be resolved');
+            }
+
+            await addDoc(collection(db, COLLECTIONS.VARIABLES), {
                 ...data,
+                organizationId,
                 createdAt: Timestamp.now(),
                 updatedAt: Timestamp.now()
             });
@@ -64,7 +73,7 @@ export function useProjectVariableMutations() {
     const updateVariable = async (id: string, data: Partial<ProjectVariable>) => {
         setLoading(true);
         try {
-            await updateDoc(doc(db, 'variables', id), {
+            await updateDoc(doc(db, COLLECTIONS.VARIABLES, id), {
                 ...data,
                 updatedAt: Timestamp.now()
             });
@@ -76,7 +85,7 @@ export function useProjectVariableMutations() {
     const deleteVariable = async (id: string) => {
         setLoading(true);
         try {
-            await deleteDoc(doc(db, 'variables', id));
+            await deleteDoc(doc(db, COLLECTIONS.VARIABLES, id));
         } finally {
             setLoading(false);
         }

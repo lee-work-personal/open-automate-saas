@@ -17,23 +17,37 @@ import {
     Menu,
     X,
     ChevronDown,
+    ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/lib/firebase';
-import { Button } from '@/components/ui';
+import { Button, Select } from '@/components/ui';
+import { useOrganizationContext } from './OrganizationProvider';
 
 export function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
     const params = useParams();
     const { user, signOut } = useAuth();
+    const {
+        organizations,
+        activeOrganizationId,
+        switchOrganization,
+        switching,
+    } = useOrganizationContext();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
 
     const projectId = params?.projectId as string | undefined;
+    const isSaaSAdmin = !!user?.email && (process.env.NEXT_PUBLIC_OPENAUTOMATE_SAAS_ADMIN_EMAILS || '')
+        .split(',')
+        .map((email) => email.trim().toLowerCase())
+        .filter(Boolean)
+        .includes(user.email.toLowerCase());
 
     const navigation = [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, global: true },
         { name: 'Projects', href: '/projects', icon: FolderKanban, global: true },
+        ...(isSaaSAdmin ? [{ name: 'SaaS Admin', href: '/admin', icon: ShieldCheck, global: true }] : []),
     ];
 
     const projectNavigation = projectId ? [
@@ -64,6 +78,18 @@ export function Sidebar() {
 
             {/* Navigation */}
             <nav className="flex-1 px-3 py-4 space-y-1">
+                <div className="px-3 pb-4">
+                    <Select
+                        label="Workspace"
+                        value={activeOrganizationId || ''}
+                        onChange={(event) => void switchOrganization(event.target.value)}
+                        disabled={switching || organizations.length === 0}
+                        options={organizations.map((organization) => ({
+                            value: organization.id,
+                            label: organization.name,
+                        }))}
+                    />
+                </div>
                 {navigation.map((item) => {
                     const isActive = pathname === item.href;
                     return (

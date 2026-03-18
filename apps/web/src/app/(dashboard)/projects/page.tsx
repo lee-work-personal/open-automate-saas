@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useProjects, useProjectMutations } from '@/lib/hooks';
+import { useOrganizationContext } from '@/components/layout/OrganizationProvider';
 import { Card, Button, Badge, Input, Modal, ConfirmModal } from '@/components/ui';
 import {
     Plus,
@@ -19,7 +20,8 @@ import {
 import toast from 'react-hot-toast';
 
 export default function ProjectsPage() {
-    const { projects, loading } = useProjects();
+    const { activeOrganization } = useOrganizationContext();
+    const { projects, loading } = useProjects(activeOrganization?.id);
     const { deleteProject, loading: mutationLoading } = useProjectMutations();
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -73,7 +75,9 @@ export default function ProjectsPage() {
                 <div>
                     <h1 className="text-3xl font-bold text-white">Projects</h1>
                     <p className="text-gray-400 mt-1">
-                        Manage your test automation projects
+                        {activeOrganization
+                            ? `Manage projects in ${activeOrganization.name}`
+                            : 'Select a workspace to manage projects'}
                     </p>
                 </div>
                 <Link href="/projects/new">

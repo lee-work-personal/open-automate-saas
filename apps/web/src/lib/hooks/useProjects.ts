@@ -17,13 +17,16 @@ import {
     deleteDoc,
     serverTimestamp,
     Timestamp,
+    getDoc,
 } from 'firebase/firestore';
 import { db, useAuth } from '@/lib/firebase';
 import { COLLECTIONS, DEFAULT_PROJECT_SETTINGS } from '@/lib/constants';
+import { ensurePersonalOrganization, getDefaultOrganizationId } from '@/lib/tenancy';
 
 // Types
 export interface Project {
     id: string;
+    organizationId: string;
     name: string;
     description?: string;
     baseUrl: string;
@@ -67,14 +70,14 @@ export interface UpdateProjectInput {
 /**
  * Hook to fetch all projects for the current user
  */
-export function useProjects() {
+export function useProjects(organizationId?: string | null) {
     const { user } = useAuth();
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
     useEffect(() => {
-        if (!user) {
+        if (!user || !organizationId) {
             setProjects([]);
             setLoading(false);
             return;
@@ -98,10 +101,16 @@ export function useProjects() {
 
         const unsubscribers = [
             onSnapshot(
-                query(collection(db, COLLECTIONS.PROJECTS), where('ownerId', '==', user.uid)),
+                query(
+                    collection(db, COLLECTIONS.PROJECTS),
+                    where('organizationId', '==', organizationId),
+                    where('ownerId', '==', user.uid)
+                ),
                 (snapshot) => {
                     snapshot.forEach((projectDoc) => {
-                        projectMap.set(projectDoc.id, { id: projectDoc.id, ...projectDoc.data() } as Project);
+                        const data = projectDoc.data() as Project;
+                        if (data.organizationId !== organizationId || data.ownerId !== user.uid) return;
+                        projectMap.set(projectDoc.id, { ...data, id: projectDoc.id } as Project);
                     });
                     commitProjects();
                 },
@@ -112,10 +121,16 @@ export function useProjects() {
                 }
             ),
             onSnapshot(
-                query(collection(db, COLLECTIONS.PROJECTS), where('members', 'array-contains', user.uid)),
+                query(
+                    collection(db, COLLECTIONS.PROJECTS),
+                    where('organizationId', '==', organizationId),
+                    where('members', 'array-contains', user.uid)
+                ),
                 (snapshot) => {
                     snapshot.forEach((projectDoc) => {
-                        projectMap.set(projectDoc.id, { id: projectDoc.id, ...projectDoc.data() } as Project);
+                        const data = projectDoc.data() as Project;
+                        if (data.organizationId !== organizationId || !(data.members || []).includes(user.uid)) return;
+                        projectMap.set(projectDoc.id, { ...data, id: projectDoc.id } as Project);
                     });
                     commitProjects();
                 },
@@ -130,7 +145,7 @@ export function useProjects() {
         return () => {
             unsubscribers.forEach((unsubscribe) => unsubscribe());
         };
-    }, [user]);
+    }, [user, organizationId]);
 
     return { projects, loading, error };
 }
@@ -156,7 +171,7 @@ export function useProject(projectId: string | null) {
             doc(db, COLLECTIONS.PROJECTS, projectId),
             (docSnap) => {
                 if (docSnap.exists()) {
-                    setProject({ id: docSnap.id, ...docSnap.data() } as Project);
+                    setProject({ ...(docSnap.data() as Project), id: docSnap.id } as Project);
                 } else {
                     setProject(null);
                 }
@@ -193,7 +208,10 @@ export function useProjectMutations() {
 
             try {
                 const prefix = generatePrefix(input.name);
+                await ensurePersonalOrganization(db, user);
+                const organizationId = await getDefaultOrganizationId(db, user.uid);
                 const docRef = await addDoc(collection(db, COLLECTIONS.PROJECTS), {
+                    organizationId,
                     name: input.name,
                     description: input.description || '',
                     baseUrl: input.baseUrl,
@@ -226,6 +244,8 @@ export function useProjectMutations() {
             setError(null);
 
             try {
+                const projectSnap = await getDoc(doc(db, COLLECTIONS.PROJECTS, projectId));
+                const projectData = projectSnap.data() as Project | undefined;
                 const updateData: Record<string, unknown> = {
                     updatedAt: serverTimestamp(),
                 };
@@ -238,6 +258,7 @@ export function useProjectMutations() {
                     updateData['settings'] = input.settings;
                 }
                 if (input.members !== undefined) updateData.members = input.members;
+                if (projectData?.organizationId) updateData.organizationId = projectData.organizationId;
 
                 await updateDoc(doc(db, COLLECTIONS.PROJECTS, projectId), updateData);
                 setLoading(false);

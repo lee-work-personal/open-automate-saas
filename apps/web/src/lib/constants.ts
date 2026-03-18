@@ -6,12 +6,14 @@
 // Firestore Collection Names
 export const COLLECTIONS = {
     USERS: 'users',
+    ORGANIZATIONS: 'organizations',
     PROJECTS: 'projects',
     TEST_SUITES: 'testSuites',
     TEST_CASES: 'testCases',
     TEST_RUNS: 'testRuns',
     TEST_RESULTS: 'testResults',
     FEATURES: 'features',
+    VARIABLES: 'variables',
 } as const;
 
 // Default Project Settings

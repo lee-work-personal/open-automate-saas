@@ -2,9 +2,9 @@ export function getProjectIdFromArtifactPath(path: string) {
     const segments = path.split('/').filter(Boolean);
     if (segments.length < 2) return null;
 
-    const [prefix, projectId] = segments;
+    const [prefix, secondSegment, thirdSegment] = segments;
     if (['screenshots', 'videos', 'traces'].includes(prefix)) {
-        return projectId || null;
+        return thirdSegment || secondSegment || null;
     }
 
     return null;

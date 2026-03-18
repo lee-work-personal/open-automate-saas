@@ -8,17 +8,17 @@ service firebase.storage {
     }
     
     // Screenshots from test runs
-    match /screenshots/{projectId}/{runId}/{fileName} {
+    match /screenshots/{organizationId}/{projectId}/{runId}/{fileName} {
       allow read, write: if false;
     }
     
     // Videos from test runs
-    match /videos/{projectId}/{runId}/{fileName} {
+    match /videos/{organizationId}/{projectId}/{runId}/{fileName} {
       allow read, write: if false;
     }
 
     // Playwright traces
-    match /traces/{projectId}/{runId}/{fileName} {
+    match /traces/{organizationId}/{projectId}/{runId}/{fileName} {
       allow read, write: if false;
     }
     

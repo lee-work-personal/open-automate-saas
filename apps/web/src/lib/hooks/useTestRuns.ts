@@ -24,6 +24,7 @@ export interface ConsoleLogEntry {
 
 export interface TestRun {
     id: string;
+    organizationId?: string;
     projectId: string;
     testCaseId?: string;
     name?: string;

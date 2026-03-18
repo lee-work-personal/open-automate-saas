@@ -62,7 +62,17 @@ afterAll(async () => {
 async function seedProject() {
     await testEnv.withSecurityRulesDisabled(async (context) => {
         const db = context.firestore();
+        await setDoc(doc(db, 'organizations', 'org-1'), {
+            name: 'Owner Workspace',
+            slug: 'owner-workspace',
+            ownerId: 'owner-1',
+            members: ['owner-1', 'viewer-1'],
+            createdAt: nowFixture(),
+            updatedAt: nowFixture(),
+        });
+
         await setDoc(doc(db, 'projects', 'project-1'), {
+            organizationId: 'org-1',
             name: 'Portal',
             description: 'Main project',
             baseUrl: 'https://portal.example.com',
@@ -81,6 +91,7 @@ async function seedProject() {
         });
 
         await setDoc(doc(db, 'testSuites', 'suite-1'), {
+            organizationId: 'org-1',
             projectId: 'project-1',
             name: 'Authentication',
             description: '',
@@ -92,6 +103,7 @@ async function seedProject() {
         });
 
         await setDoc(doc(db, 'testCases', 'case-1'), {
+            organizationId: 'org-1',
             projectId: 'project-1',
             suiteIds: ['suite-1'],
             testId: 'PTL-1',
@@ -111,10 +123,22 @@ async function seedProject() {
 
 describe('Firestore rules integration', () => {
     it('allows an owner to create a project', async () => {
+        await testEnv.withSecurityRulesDisabled(async (context) => {
+            await setDoc(doc(context.firestore(), 'organizations', 'org-owner'), {
+                name: 'Owner Workspace',
+                slug: 'owner-workspace',
+                ownerId: 'owner-1',
+                members: ['owner-1'],
+                createdAt: nowFixture(),
+                updatedAt: nowFixture(),
+            });
+        });
+
         const db = testEnv.authenticatedContext('owner-1').firestore();
 
         await assertSucceeds(
             setDoc(doc(db, 'projects', 'project-owner'), {
+                organizationId: 'org-owner',
                 name: 'Owner Project',
                 description: '',
                 baseUrl: 'https://owner.example.com',
@@ -160,6 +184,7 @@ describe('Firestore rules integration', () => {
 
         await assertFails(
             setDoc(doc(db, 'testRuns', 'run-viewer'), {
+                organizationId: 'org-1',
                 projectId: 'project-1',
                 testCaseId: 'case-1',
                 name: 'Viewer Run',
@@ -178,6 +203,7 @@ describe('Firestore rules integration', () => {
 
         await assertSucceeds(
             setDoc(doc(db, 'testRuns', 'run-owner'), {
+                organizationId: 'org-1',
                 projectId: 'project-1',
                 testCaseId: 'case-1',
                 name: 'Owner Run',

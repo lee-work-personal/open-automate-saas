@@ -18,6 +18,7 @@ import {
     serverTimestamp,
     Timestamp,
     writeBatch,
+    getDoc,
 } from 'firebase/firestore';
 import { db, useAuth } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/constants';
@@ -25,6 +26,7 @@ import { COLLECTIONS } from '@/lib/constants';
 // Types
 export interface TestSuite {
     id: string;
+    organizationId: string;
     projectId: string;
     name: string;
     description?: string;
@@ -157,7 +159,14 @@ export function useTestSuiteMutations() {
             setError(null);
 
             try {
+                const projectSnap = await getDoc(doc(db, COLLECTIONS.PROJECTS, input.projectId));
+                const organizationId = projectSnap.data()?.organizationId;
+                if (!organizationId) {
+                    throw new Error('Project organization could not be resolved');
+                }
+
                 const docRef = await addDoc(collection(db, COLLECTIONS.TEST_SUITES), {
+                    organizationId,
                     projectId: input.projectId,
                     name: input.name,
                     description: input.description || '',

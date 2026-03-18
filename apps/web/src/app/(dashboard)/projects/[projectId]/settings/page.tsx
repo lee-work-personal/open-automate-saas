@@ -258,7 +258,7 @@ export default function ProjectSettingsPage() {
                             Team Access
                         </h2>
                         <p className="text-sm text-gray-400 mt-1">
-                            Owners can edit and run tests. Viewers can inspect projects, runs, and artifacts.
+                            Owners can edit and run tests. Viewers can inspect projects, runs, and artifacts. Users must already belong to the workspace before they can be added here.
                         </p>
                     </div>
                 </div>

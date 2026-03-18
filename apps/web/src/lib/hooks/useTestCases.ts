@@ -75,6 +75,7 @@ export interface TestStep {
 
 export interface TestCase {
     id: string;
+    organizationId: string;
     projectId: string;
     suiteIds: string[];
     testId: string;
@@ -249,6 +250,10 @@ export function useTestCaseMutations() {
                     }
 
                     const projectData = projectSnap.data();
+                    const organizationId = projectData.organizationId;
+                    if (!organizationId) {
+                        throw new Error('Project organization could not be resolved');
+                    }
                     const nextNumber = (projectData.lastTestNumber || 0) + 1;
                     const prefix = projectData.idPrefix || 'TC';
                     testId = input.testId || `${prefix}-${nextNumber}`;
@@ -261,6 +266,7 @@ export function useTestCaseMutations() {
 
                     // Create test case
                     transaction.set(testCaseRef, {
+                        organizationId,
                         projectId: input.projectId,
                         suiteIds: input.suiteIds || [],
                         testId: testId,
