@@ -110,12 +110,22 @@ export default function DashboardPage() {
                             : 'Select a workspace to see your testing overview.'}
                     </p>
                 </div>
-                <Link href="/projects/new">
-                    <Button>
-                        <Plus className="w-4 h-4" />
-                        New Project
-                    </Button>
-                </Link>
+                <div className="flex gap-3">
+                    {projects.length === 0 ? (
+                        <Link href="/onboarding">
+                            <Button variant="outline">
+                                <Zap className="w-4 h-4" />
+                                Continue Setup
+                            </Button>
+                        </Link>
+                    ) : null}
+                    <Link href="/projects/new">
+                        <Button>
+                            <Plus className="w-4 h-4" />
+                            New Project
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             {/* Stats Grid */}
@@ -170,13 +180,13 @@ export default function DashboardPage() {
                                     <FolderKanban className="w-8 h-8 text-gray-600" />
                                 </div>
                                 <h3 className="text-lg font-medium text-white mb-2">No projects yet</h3>
-                                <p className="text-sm text-gray-400 mb-4 max-w-xs mx-auto">
-                                    Create your first project to start automating your tests
+                                <p className="text-sm text-gray-400 mb-4 max-w-sm mx-auto">
+                                    Use the guided onboarding flow to name your workspace and create the first project without guessing the setup order.
                                 </p>
-                                <Link href="/projects/new">
+                                <Link href="/onboarding">
                                     <Button>
-                                        <Plus className="w-4 h-4" />
-                                        Create Project
+                                        <Zap className="w-4 h-4" />
+                                        Continue Onboarding
                                     </Button>
                                 </Link>
                             </div>

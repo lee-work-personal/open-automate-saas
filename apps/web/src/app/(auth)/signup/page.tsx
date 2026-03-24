@@ -38,7 +38,7 @@ export default function SignUpPage() {
         try {
             await signUp(email, password, name);
             toast.success('Account created successfully!');
-            router.push('/dashboard');
+            router.push('/onboarding');
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to create account';
             toast.error(errorMessage);
@@ -53,7 +53,7 @@ export default function SignUpPage() {
         try {
             await signInWithGoogle();
             toast.success('Welcome!');
-            router.push('/dashboard');
+            router.push('/onboarding');
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to sign in with Google';
             toast.error(errorMessage);
