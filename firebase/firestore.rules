@@ -61,7 +61,7 @@ service cloud.firestore {
     }
 
     match /organizations/{organizationId} {
-      allow read: if isAuthenticated() && isOrganizationMember(organizationId);
+      allow read: if isAuthenticated() && (resource.data.ownerId == request.auth.uid || request.auth.uid in resource.data.members);
       allow create: if isAuthenticated() &&
                        request.resource.data.ownerId == request.auth.uid &&
                        request.auth.uid in request.resource.data.members;
@@ -74,7 +74,6 @@ service cloud.firestore {
     match /projects/{projectId} {
       // Owner or members can read - check directly from resource data
       allow read: if isAuthenticated() && 
-                     isOrganizationMember(resource.data.organizationId) &&
                      (resource.data.ownerId == request.auth.uid || 
                       request.auth.uid in resource.data.members);
       // Any authenticated user can create a project
